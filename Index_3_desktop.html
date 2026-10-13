@@ -209,11 +209,8 @@
     margin: 8px 0 0;
   }
 </style>
-
-<!-- Firebase SDKs (optional) will be initialized if /firebase-config.json is provided -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 </head>
 <body>
 
@@ -246,7 +243,6 @@
     <div class="error" id="pinErr"></div>
   </div>
 
-  <!-- NEW COMPLAINT -->
   <section id="tab-new">
     <div id="shareBanner" class="card hidden"></div>
     <form id="complaintForm" novalidate>
@@ -365,7 +361,6 @@
     </form>
   </section>
 
-  <!-- LOG -->
   <section id="tab-log" class="hidden">
     <div class="filters">
       <input id="searchBox" placeholder="Search name, phone, reg no., ticket ID…">
@@ -394,7 +389,6 @@
     <div id="ticketList"></div>
   </section>
 
-  <!-- DASHBOARD -->
   <section id="tab-dash" class="hidden">
     <div class="stats" id="statsBox"></div>
     <div class="card">
@@ -407,7 +401,6 @@
     </div>
   </section>
 
-  <!-- SETTINGS -->
   <section id="tab-settings" class="hidden">
     <div class="card">
       <h2>Team WhatsApp</h2>
@@ -439,6 +432,7 @@
 
   const STORE_KEY = "metl_bajaj_helpdesk_v1";
   const SETTINGS_KEY = "metl_bajaj_helpdesk_settings_v1";
+  const ADMIN_SESSION_KEY = "metl_bajaj_helpdesk_admin_session_v1";
 
   const MODELS = {
     "2W": ["Boxer 125 HD", "Boxer 150 HD", "X125", "X150"],
@@ -447,11 +441,9 @@
 
   let tickets = [];
   let settings = { teamNumber: "" };
-
-  // Remote (Firebase) support
   let useRemote = false;
   let remoteDb = null;
-  let remoteCol = null; // collection reference
+  let remoteCol = null;
 
   async function tryInitRemote() {
     try {
@@ -459,27 +451,22 @@
       if (!resp.ok) return;
       const cfg = await resp.json();
       if (!cfg || !cfg.apiKey) return;
-      // init firebase compat
       firebase.initializeApp(cfg);
       remoteDb = firebase.firestore();
       remoteCol = remoteDb.collection('complaints');
       useRemote = true;
       console.info('Firebase initialized — remote complaints enabled');
-      // if admin, subscribe to realtime updates later when admin logs in
     } catch (e) {
       console.warn('No firebase config or init failed', e);
     }
   }
 
-  /* ---------- storage (local or remote) ---------- */
   async function load() {
-    // load local settings first
     try {
       settings = Object.assign({ teamNumber: "" }, JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"));
     } catch (e) { settings = { teamNumber: "" }; }
 
     if (useRemote) {
-      // fetch remote complaints (read-only for customers) — keep local copy too
       try {
         const snapshot = await remoteCol.orderBy('createdAt', 'desc').get();
         tickets = snapshot.docs.map(d => d.data());
@@ -494,7 +481,6 @@
 
   async function saveTickets() {
     if (useRemote) {
-      // Sync local tickets to remote (upsert each ticket)
       try {
         const batch = remoteDb.batch();
         tickets.forEach(t => {
@@ -502,7 +488,6 @@
           batch.set(docRef, t, { merge: true });
         });
         await batch.commit();
-        // also keep a local cache
         try { localStorage.setItem(STORE_KEY, JSON.stringify(tickets)); } catch (e) {}
         return;
       } catch (e) {
@@ -512,7 +497,6 @@
         return;
       }
     }
-    // fallback: local only
     try { localStorage.setItem(STORE_KEY, JSON.stringify(tickets)); } catch (e) { toast("Could not save to this browser. Export CSV as a backup."); }
   }
 
@@ -520,11 +504,10 @@
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
   }
 
-  /* ---------- helpers ---------- */
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
   function esc(s) {
-    return String(s == null ? "" : s).replace(/[&<>'\"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
   function toast(msg) {
     const t = $("#toast");
@@ -549,7 +532,6 @@
   function waDigits(p) { return cleanPhone(p).replace(/^\+/, ""); }
   function vehicleLabel(v) { return v === "3W" ? "3-Wheeler (Bajaj)" : "2-Wheeler (Motorcycle)"; }
 
-  /* ---------- WhatsApp ---------- */
   function buildTicketMessage(t) {
     return [
       "*MeTL Bajaj Service Help Desk*",
@@ -593,7 +575,6 @@
     const num = waDigits(settings.teamNumber);
     const params = (num ? "phone=" + num + "&" : "") + "text=" + encodeURIComponent(text);
     try { if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {}); } catch (e) {}
-    // try native first, fallback to web
     const nativeUrl = "whatsapp://send?" + params;
     const webUrl = "https://wa.me/" + (num || "") + "?text=" + encodeURIComponent(text);
     window.location.href = nativeUrl;
@@ -601,7 +582,6 @@
     toast("Message copied. If WhatsApp doesn't open, paste it into the chat.");
   }
 
-  /* ---------- tabs ---------- */
   function showTab(name) {
     $$('nav .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     ['new', 'log', 'dash', 'settings'].forEach(n => document.getElementById('tab-' + n).classList.toggle('hidden', n !== name));
@@ -609,7 +589,6 @@
     if (name === 'dash') renderDash();
   }
 
-  /* ---------- form ---------- */
   function fillModels(vt) {
     const sel = $("#model");
     sel.innerHTML = '<option value="">Select model</option>' +
@@ -663,7 +642,6 @@
     return missing;
   }
 
-  // Attach event listeners after DOM ready
   document.addEventListener('DOMContentLoaded', async () => {
     await tryInitRemote();
     await load();
@@ -690,17 +668,13 @@
       tickets.unshift(ticket);
       await saveTickets();
 
-      // if remote is available try to write single doc as well (already in saveTickets)
-
       this.reset();
       setVehicle("2W");
       toast("Saved as " + ticket.id);
-
       showShareBanner(ticket);
     });
 
     $("#clearForm").addEventListener("click", () => { $("#complaintForm").reset(); $("#formError").textContent = ""; setVehicle("2W"); });
-
     $$("#vehicleType .radio-pill").forEach(p => { p.addEventListener("click", () => setVehicle(p.dataset.val)); });
 
     $("#ticketList").addEventListener("change", async function (e) {
@@ -711,7 +685,6 @@
       t.status = el.value;
       t.updatedAt = new Date().toISOString();
       await saveTickets();
-      // update remote single doc if available
       if (useRemote) try { await remoteCol.doc(t.id).set(t, { merge: true }); } catch (e) { console.warn(e); }
       renderLog();
       toast(t.id + " → " + t.status);
@@ -745,7 +718,12 @@
         input.focus();
       }
       if (btn.dataset.act === "delete") {
-        if (!btn.dataset.armed) { btn.dataset.armed = "1"; btn.textContent = "Click again to delete"; setTimeout(() => { if (btn.isConnected) { btn.dataset.armed = ""; btn.textContent = "Delete"; } }, 4000); return; }
+        if (!btn.dataset.armed) {
+          btn.dataset.armed = "1";
+          btn.textContent = "Click again to delete";
+          setTimeout(() => { if (btn.isConnected) { btn.dataset.armed = ""; btn.textContent = "Delete"; } }, 4000);
+          return;
+        }
         tickets = tickets.filter(x => x.id !== id);
         await saveTickets();
         if (useRemote) try { await remoteCol.doc(id).delete(); } catch (e) { console.warn(e); }
@@ -754,7 +732,10 @@
       }
     });
 
-    ["searchBox", "filterVehicle", "filterStatus", "filterPriority"].forEach(id => { $("#" + id).addEventListener("input", renderLog); $("#" + id).addEventListener("change", renderLog); });
+    ["searchBox", "filterVehicle", "filterStatus", "filterPriority"].forEach(id => {
+      $("#" + id).addEventListener("input", renderLog);
+      $("#" + id).addEventListener("change", renderLog);
+    });
 
     $("#shareOpen").addEventListener("click", () => {
       const open = tickets.filter(t => t.status !== "Resolved");
@@ -778,7 +759,6 @@
       a.remove();
     });
 
-    // Settings
     $("#teamNumber").value = settings.teamNumber || "";
     $("#saveSettings").addEventListener("click", () => { settings.teamNumber = $("#teamNumber").value.trim(); saveSettings(); toast("Settings saved."); });
     $("#wipeAll").addEventListener("click", async () => {
@@ -786,7 +766,6 @@
       const b = $("#wipeAll");
       if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Click again to delete ALL"; setTimeout(() => { b.dataset.armed = ""; b.textContent = "🗑️ Delete all complaints"; }, 4000); return; }
       b.dataset.armed = ""; b.textContent = "🗑️ Delete all complaints";
-      // delete remote too if available
       if (useRemote) {
         try {
           const snap = await remoteCol.get();
@@ -801,45 +780,58 @@
       toast("All complaints deleted.");
     });
 
-    // Staff / admin handling
     const ADMIN_PIN = "metl2026";
-    let isAdmin = false;
+    let isAdmin = sessionStorage.getItem(ADMIN_SESSION_KEY) === "1";
+
     function applyRole() {
       document.body.classList.toggle("is-admin", isAdmin);
+      sessionStorage.setItem(ADMIN_SESSION_KEY, isAdmin ? "1" : "0");
       $("#adminBtn").textContent = isAdmin ? "🔓 Staff logout" : "🔒 Staff login";
-      if (!isAdmin && $("nav .tab.admin-tab.active")) showTab("new");
-      if (isAdmin && useRemote) {
-        // subscribe to realtime updates for admin
-        try {
-          remoteCol.orderBy('createdAt', 'desc').onSnapshot(snap => {
-            tickets = snap.docs.map(d => d.data());
-            renderLog();
-            renderDash();
-          });
-        } catch (e) { console.warn('Realtime subscription failed', e); }
+
+      if (!isAdmin) {
+        if ($("nav .tab.admin-tab.active")) showTab("new");
+        return;
       }
+
+      showTab("log");
+      toast("Staff access granted.");
     }
 
     $("#adminBtn").addEventListener("click", () => {
-      if (document.body.classList.contains('is-admin')) { document.body.classList.remove('is-admin'); isAdmin = false; applyRole(); toast('Signed out of staff area.'); return; }
-      $("#pinBox").classList.remove("hidden"); $("#pinInput").value = ""; $("#pinErr").textContent = ""; $("#pinInput").focus();
+      if (isAdmin) {
+        isAdmin = false;
+        applyRole();
+        toast("Signed out of staff area.");
+        return;
+      }
+      $("#pinBox").classList.remove("hidden");
+      $("#pinInput").value = "";
+      $("#pinErr").textContent = "";
+      $("#pinInput").focus();
     });
+
     $("#pinCancel").addEventListener("click", () => $("#pinBox").classList.add("hidden"));
+
     function tryPin() {
-      if ($("#pinInput").value === ADMIN_PIN) { isAdmin = true; $("#pinBox").classList.add("hidden"); applyRole(); toast('Staff access granted.'); } else { $("#pinErr").textContent = 'Incorrect PIN. Please try again.'; }
+      if ($("#pinInput").value === ADMIN_PIN) {
+        isAdmin = true;
+        $("#pinBox").classList.add("hidden");
+        applyRole();
+      } else {
+        $("#pinErr").textContent = "Incorrect PIN. Please try again.";
+      }
     }
-    $("#pinOk").addEventListener("click", tryPin); $("#pinInput").addEventListener("keydown", e => { if (e.key === "Enter") tryPin(); });
+
+    $("#pinOk").addEventListener("click", tryPin);
+    $("#pinInput").addEventListener("keydown", e => { if (e.key === "Enter") tryPin(); });
 
     applyRole();
-
-    // initial rendering
-    setVehicle('2W');
+    setVehicle("2W");
     renderLog();
     renderDash();
     $("#todayLabel").textContent = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
   }
 
-  /* ---------- render & helpers ---------- */
   function filteredTickets() {
     const q = $("#searchBox").value.trim().toLowerCase();
     const v = $("#filterVehicle").value;
