@@ -1,317 +1,191 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>MeTL Bajaj Service Help Desk</title>
-<style>
-  :root {
-    --red: #0b3d91;
-    --red-dark: #072a66;
-    --blue: #0b3d91;
-    --bg: #f4f5f7;
-    --card: #ffffff;
-    --text: #1d1f23;
-    --muted: #6b7280;
-    --border: #e2e5ea;
-    --ok: #15803d;
-    --warn: #b45309;
-    --danger: #b91c1c;
-    --wa: #25d366;
-    --wa-dark: #128c7e;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    font-size: 15px;
-  }
-  header {
-    background: linear-gradient(90deg, var(--red), var(--red-dark));
-    color: #fff;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  header h1 { font-size: 18px; margin: 0; }
-  header small { opacity: .85; font-size: 12px; }
-  nav {
-    display: flex;
-    gap: 4px;
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    padding: 0 12px;
-    overflow-x: auto;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-  }
-  nav button {
-    border: none;
-    background: none;
-    padding: 12px 14px;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--muted);
-    border-bottom: 3px solid transparent;
-    white-space: nowrap;
-  }
-  nav button.active { color: var(--red); border-bottom-color: var(--red); font-weight: 600; }
-  main { max-width: 980px; margin: 0 auto; padding: 16px; }
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-  .card h2 { font-size: 16px; margin: 0 0 12px; color: var(--blue); }
-  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-  .full { grid-column: 1 / -1; }
-  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #374151; }
-  label span.req { color: var(--danger); }
-  input, select, textarea {
-    width: 100%;
-    padding: 9px 10px;
-    border: 1px solid #cfd4dc;
-    border-radius: 7px;
-    font-size: 15px;
-    font-family: inherit;
-    background: #fff;
-  }
-  textarea { min-height: 90px; resize: vertical; }
-  input:focus, select:focus, textarea:focus { outline: 2px solid #9ec5f5; border-color: var(--red); }
-  .radio-row { display: flex; gap: 10px; flex-wrap: wrap; }
-  .radio-pill {
-    flex: 1;
-    min-width: 150px;
-    border: 2px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    user-select: none;
-  }
-  .radio-pill input { width: auto; }
-  .radio-pill.selected { border-color: var(--red); background: #eef5ff; }
-  .brand { display: flex; align-items: center; gap: 12px; }
-  body:not(.is-admin) .admin-tab, body:not(.is-admin) .admin-only { display: none !important; }
-  .logo-img { height: 52px; width: auto; background: #fff; border-radius: 8px; padding: 4px 6px; box-sizing: content-box; }
-  .logo-badge {
-    background: #fff;
-    color: var(--red);
-    font-weight: 800;
-    font-size: 16px;
-    letter-spacing: .5px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    min-width: 56px;
-    text-align: center;
-  }
-  .btn {
-    border: none;
-    border-radius: 8px;
-    padding: 10px 16px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .btn-primary { background: var(--red); color: #fff; }
-  .btn-primary:hover { background: var(--red-dark); }
-  .btn-wa { background: var(--wa); color: #073; }
-  .btn-wa:hover { background: var(--wa-dark); color: #fff; }
-  .btn-ghost { background: #eef1f5; color: var(--text); }
-  .btn-danger { background: #fde8e8; color: var(--danger); }
-  .btn-sm { padding: 6px 10px; font-size: 12px; }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
-  .error { color: var(--danger); font-size: 13px; margin-top: 6px; min-height: 0; }
-  .toast {
-    position: fixed;
-    left: 50%;
-    bottom: 24px;
-    transform: translateX(-50%);
-    background: #111827;
-    color: #fff;
-    padding: 10px 16px;
-    border-radius: 8px;
-    font-size: 14px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .25s;
-    z-index: 50;
-    max-width: 90vw;
-    text-align: center;
-  }
-  .toast.show { opacity: 1; }
-  .stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: 16px; }
-  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-  .stat .num { font-size: 26px; font-weight: 700; }
-  .stat .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
-  .filters { display: grid; gap: 10px; grid-template-columns: 2fr repeat(3, 1fr); margin-bottom: 12px; }
-  @media (max-width: 720px) { .filters { grid-template-columns: 1fr 1fr; } }
-  .ticket {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-left: 5px solid var(--blue);
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 10px;
-  }
-  .ticket.p-High { border-left-color: var(--danger); }
-  .ticket.p-Medium { border-left-color: var(--warn); }
-  .ticket.p-Low { border-left-color: var(--ok); }
-  .ticket-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
-  .ticket-id { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; color: var(--blue); }
-  .ticket-meta { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
-  .ticket-desc { margin: 8px 0; white-space: pre-wrap; }
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-    background: #eef1f5;
-    color: #374151;
-    margin-left: 4px;
-  }
-  .b-Open { background: #fde8e8; color: var(--danger); }
-  .b-InProgress { background: #fef3c7; color: var(--warn); }
-  .b-Resolved { background: #dcfce7; color: var(--ok); }
-  .b-High { background: #fde8e8; color: var(--danger); }
-  .b-Medium { background: #fef3c7; color: var(--warn); }
-  .b-Low { background: #dcfce7; color: var(--ok); }
-  .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
-  .hidden { display: none !important; }
-  .settings-row { display: grid; gap: 10px; grid-template-columns: 1fr auto; align-items: end; }
-  @media (max-width: 600px) { .settings-row { grid-template-columns: 1fr; } }
-  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  pre.preview {
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
-    border-radius: 8px;
-    padding: 10px;
-    white-space: pre-wrap;
-    font-size: 13px;
-    font-family: inherit;
-    margin: 8px 0 0;
-  }
-</style>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bajaj Service Help Desk</title>
+  <style>
+    :root {
+      --red: #0b3d91;
+      --red-dark: #072a66;
+      --blue: #0b3d91;
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --text: #1d1f23;
+      --muted: #6b7280;
+      --border: #e2e5ea;
+      --ok: #15803d;
+      --warn: #b45309;
+      --danger: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: linear-gradient(90deg, var(--red), var(--red-dark));
+      color: #fff;
+      padding: 16px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    h1 { margin: 0; font-size: 1.3rem; }
+    .subtitle { opacity: 0.9; font-size: 0.8rem; }
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #374151;
+    }
+    input, select, textarea, button {
+      font: inherit;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cfd4dc;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--red); color: #fff; }
+    .btn-primary:hover { background: var(--red-dark); }
+    .btn-ghost {
+      background: #eef1f5;
+      color: var(--text);
+    }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .ticket {
+      border: 1px solid var(--border);
+      border-left: 5px solid var(--blue);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      background: var(--card);
+    }
+    .ticket-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: baseline;
+    }
+    .ticket-id {
+      font-weight: 700;
+      color: var(--blue);
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+    .meta {
+      margin-top: 4px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-left: 6px;
+      background: #eef1f5;
+      color: #374151;
+    }
+    .b-Open { background: #fde8e8; color: var(--danger); }
+    .b-InProgress { background: #fef3c7; color: var(--warn); }
+    .b-Resolved { background: #dcfce7; color: var(--ok); }
+    .empty { color: var(--muted); text-align: center; padding: 24px 12px; }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      background: #111827;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 50;
+    }
+    .toast.show { opacity: 1; }
+    @media (max-width: 600px) {
+      .ticket-head { display: block; }
+    }
+  </style>
 </head>
 <body>
-
-<header>
-  <div class="brand">
-    <img class="logo-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAVQAAADwCAIAAADQCguuAAA/30lEQVR42u2dd3wUxfvHn9l2/ZJcekJCSaFK710QaQJCaAIKfO2KUqQqUmwYpPhTERsKKqD0jvSiFANIbyEhpEB6ckmu3+[...]
+  <header>
     <div>
       <h1>Bajaj Service Help Desk</h1>
-      <small>2-Wheelers (Motorcycles) &amp; 3-Wheelers (Bajaj) · Customer complaint capture</small>
+      <div class="subtitle">2-Wheelers &amp; 3-Wheelers • Customer complaint capture</div>
     </div>
-  </div>
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="adminBtn">🔒 Staff login</button><small id="todayLabel"></small></div>
-</header>
+    <button class="btn btn-ghost" id="resetDemoBtn" type="button">Reset demo data</button>
+  </header>
 
-<nav>
-  <button class="tab active" data-tab="new">New Complaint</button>
-  <button class="tab admin-tab" data-tab="log">Complaints Log</button>
-  <button class="tab admin-tab" data-tab="dash">Dashboard</button>
-  <button class="tab admin-tab" data-tab="settings">Settings</button>
-</nav>
-
-<main>
-  <div id="pinBox" class="card hidden" style="margin-top:16px">
-    <h2>Staff PIN</h2>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <input id="pinInput" type="password" placeholder="Enter staff PIN" style="max-width:260px">
-      <button class="btn btn-primary" id="pinOk">Unlock</button>
-      <button class="btn btn-ghost" id="pinCancel">Cancel</button>
-    </div>
-    <div class="error" id="pinErr"></div>
-  </div>
-
-  <section id="tab-new">
-    <div id="shareBanner" class="card hidden"></div>
-    <form id="complaintForm" novalidate>
-      <div class="card">
-        <h2>Vehicle Type</h2>
-        <div class="radio-row" id="vehicleType">
-          <label class="radio-pill selected" data-val="2W">
-            <input type="radio" name="vehicleType" value="2W" checked> 🏍️ 2-Wheeler (Motorcycle)
-          </label>
-          <label class="radio-pill" data-val="3W">
-            <input type="radio" name="vehicleType" value="3W"> 🛺 3-Wheeler (Bajaj)
-          </label>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Customer Details</h2>
+  <main>
+    <section class="card">
+      <h2>New Complaint</h2>
+      <form id="complaintForm">
         <div class="grid">
           <div>
-            <label for="custName">Customer name <span class="req">*</span></label>
-            <input id="custName" name="custName" autocomplete="off" placeholder="Full name">
+            <label for="custName">Customer name</label>
+            <input id="custName" name="custName" placeholder="Full name" required />
           </div>
           <div>
-            <label for="custPhone">Phone number <span class="req">*</span></label>
-            <input id="custPhone" name="custPhone" inputmode="tel" placeholder="+255 7XX XXX XXX">
-          </div>
-          <div class="full">
-            <label for="custAddress">Location / address</label>
-            <input id="custAddress" name="custAddress" placeholder="Area, street or landmark">
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Vehicle Details</h2>
-        <div class="grid">
-          <div>
-            <label for="model">Model <span class="req">*</span></label>
-            <select id="model" name="model"></select>
+            <label for="custPhone">Phone number</label>
+            <input id="custPhone" name="custPhone" placeholder="+255 7XX XXX XXX" required />
           </div>
           <div>
-            <label for="regNo">Registration no.</label>
-            <input id="regNo" name="regNo" placeholder="e.g. T 123 ABC" autocomplete="off">
+            <label for="vehicleType">Vehicle type</label>
+            <select id="vehicleType" name="vehicleType">
+              <option value="2W">2-Wheeler</option>
+              <option value="3W">3-Wheeler</option>
+            </select>
           </div>
           <div>
-            <label for="chassisNo">Chassis No <span class="req">*</span></label>
-            <input id="chassisNo" name="chassisNo" placeholder="Up to 17 characters" maxlength="17">
+            <label for="model">Model</label>
+            <input id="model" name="model" placeholder="Boxer 150 HD" required />
           </div>
           <div>
-            <label for="kms">Odometer (km)</label>
-            <input id="kms" name="kms" inputmode="numeric" placeholder="Optional">
+            <label for="branch">Dealer / branch</label>
+            <input id="branch" name="branch" placeholder="e.g. Dar es Salaam - Kariakoo" required />
           </div>
           <div>
-            <label for="purchaseDate">Purchase / last service date</label>
-            <input id="purchaseDate" name="purchaseDate" type="date">
-          </div>
-          <div>
-            <label for="branch">Dealer / branch <span class="req">*</span></label>
-            <input id="branch" name="branch" placeholder="e.g. Dar es Salaam - Kariakoo">
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Complaint</h2>
-        <div class="grid">
-          <div>
-            <label for="category">Category <span class="req">*</span></label>
-            <select id="category" name="category">
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
               <option value="">Select complaint</option>
               <option>KUBADILISHA MAFUTA YA INJINI</option>
               <option>HUDUMA ZA KAWAIDA</option>
@@ -324,242 +198,267 @@
             </select>
           </div>
           <div>
-            <label for="priority">Priority <span class="req">*</span></label>
+            <label for="priority">Priority</label>
             <select id="priority" name="priority">
               <option value="Low">Low</option>
               <option value="Medium" selected>Medium</option>
-              <option value="High">High (vehicle off road)</option>
+              <option value="High">High</option>
             </select>
           </div>
           <div>
-            <label for="assignedTo">Assign to</label>
-            <input id="assignedTo" name="assignedTo" placeholder="Team member name">
-          </div>
-          <div>
-            <label for="warranty">Under warranty?</label>
-            <select id="warranty" name="warranty">
-              <option value="Unknown">Not sure</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
+            <label for="status">Status</label>
+            <select id="status" name="status">
+              <option value="Open" selected>Open</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved</option>
             </select>
           </div>
-          <div class="full">
-            <label for="description">Description of the problem <span class="req">*</span></label>
-            <textarea id="description" name="description" placeholder="What did the customer report? When did it start? Any sounds, warning lights, or previous repairs?"></textarea>
-          </div>
-          <div class="full">
-            <label for="partsNeeded">Spare parts needed (if known)</label>
-            <input id="partsNeeded" name="partsNeeded" placeholder="e.g. clutch plate, rear brake shoe">
+          <div class="full" style="grid-column:1 / -1;">
+            <label for="description">Description of the problem</label>
+            <textarea id="description" name="description" placeholder="What did the customer report?" required></textarea>
           </div>
         </div>
-        <div class="error" id="formError"></div>
         <div class="actions">
-          <button type="submit" class="btn btn-primary">💾 Save Complaint</button>
-          <button type="button" class="btn btn-ghost" id="clearForm">Clear</button>
+          <button type="submit" class="btn btn-primary">Save complaint</button>
+          <button type="button" class="btn btn-ghost" id="clearFormBtn">Clear</button>
         </div>
-      </div>
-    </form>
-  </section>
+      </form>
+    </section>
 
-  <section id="tab-log" class="hidden">
-    <div class="filters">
-      <input id="searchBox" placeholder="Search name, phone, reg no., ticket ID…">
-      <select id="filterVehicle">
-        <option value="">All vehicles</option>
-        <option value="2W">2-Wheelers</option>
-        <option value="3W">3-Wheelers</option>
-      </select>
-      <select id="filterStatus">
-        <option value="">All statuses</option>
-        <option>Open</option>
-        <option>In Progress</option>
-        <option>Resolved</option>
-      </select>
-      <select id="filterPriority">
-        <option value="">All priorities</option>
-        <option>High</option>
-        <option>Medium</option>
-        <option>Low</option>
-      </select>
-    </div>
-    <div class="actions" style="margin:0 0 12px">
-      <button class="btn btn-wa" id="shareOpen">📲 Share open tickets on WhatsApp</button>
-      <button class="btn btn-ghost" id="exportCsv">⬇️ Export CSV</button>
-    </div>
-    <div id="ticketList"></div>
-  </section>
+    <section class="card">
+      <h2>Complaints Log</h2>
+      <div id="ticketList"></div>
+    </section>
+  </main>
 
-  <section id="tab-dash" class="hidden">
-    <div class="stats" id="statsBox"></div>
-    <div class="card">
-      <h2>By category</h2>
-      <div id="catBreakdown"></div>
-    </div>
-    <div class="card">
-      <h2>By model</h2>
-      <div id="modelBreakdown"></div>
-    </div>
-  </section>
+  <div class="toast" id="toast"></div>
 
-  <section id="tab-settings" class="hidden">
-    <div class="card">
-      <h2>Team WhatsApp</h2>
-      <div class="settings-row">
-        <div>
-          <label for="teamNumber">Team WhatsApp number (international format, optional)</label>
-          <input id="teamNumber" placeholder="e.g. 255712345678">
-          <div class="hint">Leave blank to pick any contact or group in WhatsApp each time.</div>
-        </div>
-        <button class="btn btn-primary" id="saveSettings">Save</button>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Data</h2>
-      <p class="hint" style="margin-top:0">Complaints are stored only in this browser on this device unless you configure a remote backend (Firebase). See firebase-config.example.json in the repo[...]</p>
-      <div class="actions">
-        <button class="btn btn-danger" id="wipeAll">🗑️ Delete all complaints</button>
-      </div>
-    </div>
-  </section>
+  <script>
+    (function () {
+      const STORE_KEY = 'metl_bajaj_helpdesk_v1';
+      const APP_CONFIG_URL = './apps-config.json';
+      const FIREBASE_CONFIG_URL = './firebase-config.json';
+      let tickets = [];
+      let GAS_URL = '';
+      let useRemote = false;
+      let remoteDb = null;
+      let remoteCol = null;
 
-</main>
+      function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => toast.classList.remove('show'), 2200);
+      }
 
-<div class="toast" id="toast"></div>
+      async function loadAppConfig() {
+        try {
+          const res = await fetch(APP_CONFIG_URL + '?t=' + Date.now(), { cache: 'no-store' });
+          if (!res.ok) return;
+          const cfg = await res.json();
+          if (cfg && cfg.endpoint) {
+            GAS_URL = cfg.endpoint;
+          }
+        } catch (e) {
+          console.warn('Could not read apps config', e);
+        }
+      }
 
-<script>
-(function () {
-  "use strict";
+      async function tryInitRemote() {
+        if (typeof firebase === 'undefined') return;
+        try {
+          const resp = await fetch(FIREBASE_CONFIG_URL, { cache: 'no-store' });
+          if (!resp.ok) return;
+          const cfg = await resp.json();
+          if (!cfg || !cfg.apiKey) return;
+          firebase.initializeApp(cfg);
+          remoteDb = firebase.firestore();
+          remoteCol = remoteDb.collection('complaints');
+          useRemote = true;
+        } catch (e) {
+          console.warn('No Firebase config or init failed', e);
+        }
+      }
 
-  // Google Apps Script web app URL (replace with your deployed URL if different)
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbw25rVHqlB58J2UZFmqMwdfdiiKKirTMhN4sNGCwOXsYLtsiEtlU_xMdlhFBQ7Q69MYMg/exec';
+      function readLocalTickets() {
+        try {
+          tickets = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+        } catch (e) {
+          tickets = [];
+        }
+      }
 
-  const STORE_KEY = "metl_bajaj_helpdesk_v1";
-  const SETTINGS_KEY = "metl_bajaj_helpdesk_settings_v1";
-  const ADMIN_SESSION_KEY = "metl_bajaj_helpdesk_admin_session_v1";
+      async function loadTickets() {
+        readLocalTickets();
 
-  const MODELS = {
-    "2W": ["Boxer 125 HD", "Boxer 150 HD", "X125", "X150"],
-    "3W": ["Bajaji RE CNG", "Bajaji RE Petrol"]
-  };
+        if (GAS_URL) {
+          try {
+            const res = await fetch(GAS_URL + '?t=' + Date.now(), { cache: 'no-store' });
+            if (res.ok) {
+              const rows = await res.json();
+              if (Array.isArray(rows) && rows.length) {
+                tickets = rows;
+                renderTickets();
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to load from GAS', e);
+          }
+        }
 
-  let tickets = [];
-  let settings = { teamNumber: "" };
-  let useRemote = false;
-  let remoteDb = null;
-  let remoteCol = null;
-
-  async function tryInitRemote() {
-    try {
-      const resp = await fetch('/firebase-config.json');
-      if (!resp.ok) return;
-      const cfg = await resp.json();
-      if (!cfg || !cfg.apiKey) return;
-      firebase.initializeApp(cfg);
-      remoteDb = firebase.firestore();
-      remoteCol = remoteDb.collection('complaints');
-      useRemote = true;
-      console.info('Firebase initialized — remote complaints enabled');
-    } catch (e) {
-      console.warn('No firebase config or init failed', e);
-    }
-  }
-
-  async function load() {
-    try {
-      settings = Object.assign({ teamNumber: "" }, JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"));
-    } catch (e) { settings = { teamNumber: "" }; }
-
-    // 1) Try Google Apps Script backend if configured
-    try {
-      if (GAS_URL) {
-        const res = await fetch(GAS_URL + '?t=' + Date.now());
-        if (res.ok) {
-          const rows = await res.json();
-          if (Array.isArray(rows)) {
-            // The Apps Script returns rows as objects with headers as keys
-            tickets = rows.map(r => {
-              // ensure keys exist and types are strings where appropriate
-              return Object.assign({
-                id: r.id || r.ID || r.Id || r.ticketId || '',
-                createdAt: r.createdAt || r.created_at || r.CreatedAt || new Date().toISOString(),
-                updatedAt: r.updatedAt || r.updated_at || r.UpdatedAt || new Date().toISOString(),
-                status: r.status || 'Open'
-              }, r);
-            }).reverse(); // reverse so newest appear first (sheet has oldest first)
-            console.info('Loaded', tickets.length, 'tickets from GAS');
+        if (useRemote && remoteCol) {
+          try {
+            const snapshot = await remoteCol.orderBy('createdAt', 'desc').get();
+            tickets = snapshot.docs.map(doc => doc.data());
+            renderTickets();
             return;
+          } catch (e) {
+            console.warn('Failed to fetch remote tickets', e);
+          }
+        }
+
+        renderTickets();
+      }
+
+      function saveLocalTickets() {
+        try {
+          localStorage.setItem(STORE_KEY, JSON.stringify(tickets));
+        } catch (e) {
+          console.warn('Unable to write localStorage', e);
+        }
+      }
+
+      async function saveTickets() {
+        saveLocalTickets();
+
+        if (GAS_URL) {
+          try {
+            const res = await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tickets })
+            });
+            if (res.ok) {
+              return;
+            }
+          } catch (e) {
+            console.warn('Failed to save to GAS', e);
+          }
+        }
+
+        if (useRemote && remoteDb && remoteCol) {
+          try {
+            const batch = remoteDb.batch();
+            tickets.forEach(ticket => {
+              const ref = remoteCol.doc(ticket.id);
+              batch.set(ref, ticket, { merge: true });
+            });
+            await batch.commit();
+            return;
+          } catch (e) {
+            console.warn('Failed to save to Firebase', e);
           }
         }
       }
-    } catch (e) {
-      console.warn('Failed to load from GAS', e);
-    }
 
-    // 2) Try Firebase if available
-    if (useRemote) {
-      try {
-        const snapshot = await remoteCol.orderBy('createdAt', 'desc').get();
-        tickets = snapshot.docs.map(d => d.data());
-        return;
-      } catch (e) {
-        console.warn('Failed to fetch remote tickets, falling back to localStorage', e);
-      }
-    }
-
-    // 3) Fallback to localStorage
-    try { tickets = JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); } catch (e) { tickets = []; }
-  }
-
-  async function saveTickets() {
-    // Attempt GAS save first (preferred if configured)
-    if (GAS_URL) {
-      try {
-        const payload = { tickets };
-        const res = await fetch(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-          try { localStorage.setItem(STORE_KEY, JSON.stringify(tickets)); } catch (e) {}
-          console.info('Saved tickets to GAS');
+      function renderTickets() {
+        const list = document.getElementById('ticketList');
+        if (!tickets.length) {
+          list.innerHTML = '<div class="empty">No complaints yet.</div>';
           return;
-        } else {
-          console.warn('GAS save responded with', res.status);
         }
-      } catch (e) {
-        console.warn('Failed to save to GAS', e);
+
+        list.innerHTML = tickets
+          .slice()
+          .reverse()
+          .map(ticket => {
+            const status = ticket.status || 'Open';
+            const priority = ticket.priority || 'Medium';
+            return `
+              <div class="ticket">
+                <div class="ticket-head">
+                  <div>
+                    <span class="ticket-id">${escapeHtml(ticket.id || 'TICKET')}</span>
+                    <span class="badge b-${status.replace(/\s+/g, '')}">${escapeHtml(status)}</span>
+                    <span class="badge b-${priority}">${escapeHtml(priority)}</span>
+                  </div>
+                  <div>${escapeHtml(ticket.vehicleType || '2W')}</div>
+                </div>
+                <div class="meta">
+                  ${escapeHtml(ticket.customerName || ticket.custName || '')} • ${escapeHtml(ticket.phone || ticket.custPhone || '')} • ${escapeHtml(ticket.branch || '')}
+                </div>
+                <div class="meta">${escapeHtml(ticket.category || '')} • ${escapeHtml(ticket.model || '')}</div>
+                <div style="margin-top:10px; white-space:pre-wrap;">${escapeHtml(ticket.description || '')}</div>
+              </div>
+            `;
+          })
+          .join('');
       }
-    }
 
-    // If GAS not available or failed, fallback to Firebase if configured
-    if (useRemote) {
-      try {
-        const batch = remoteDb.batch();
-        tickets.forEach(t => {
-          const docRef = remoteCol.doc(t.id);
-          batch.set(docRef, t, { merge: true });
-        });
-        await batch.commit();
-        try { localStorage.setItem(STORE_KEY, JSON.stringify(tickets)); } catch (e) {}
-        return;
-      } catch (e) {
-        console.warn('Failed to save remote tickets', e);
-        try { localStorage.setItem(STORE_KEY, JSON.stringify(tickets)); } catch (e) {}
-        toast('Saved locally (network issue uploading to remote).');
-        return;
+      function generateId() {
+        const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+        return `T-${Date.now().toString().slice(-6)}-${random}`;
       }
-    }
 
-    // Local-only fallback
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(tickets)); } catch (e) { toast("Could not save to this browser. Export CSV as a backup."); }
-  }
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
 
-  function saveSettings() {
-    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
-  }
+      async function handleSubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
 
-  const $ = (sel) => document.querySelector(sel);
-  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-  function esc(s) {
-    return String(s == null ? "" : s).replace(/[&<>\
+        const ticket = {
+          id: generateId(),
+          customerName: formData.get('custName') || '',
+          phone: formData.get('custPhone') || '',
+          vehicleType: formData.get('vehicleType') || '2W',
+          model: formData.get('model') || '',
+          branch: formData.get('branch') || '',
+          category: formData.get('category') || '',
+          priority: formData.get('priority') || 'Medium',
+          status: formData.get('status') || 'Open',
+          description: formData.get('description') || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        tickets.push(ticket);
+        await saveTickets();
+        renderTickets();
+        form.reset();
+        showToast('Complaint saved');
+      }
+
+      function resetDemoData() {
+        tickets = [];
+        saveLocalTickets();
+        renderTickets();
+        showToast('Demo data reset');
+      }
+
+      document.getElementById('complaintForm').addEventListener('submit', handleSubmit);
+      document.getElementById('clearFormBtn').addEventListener('click', function () {
+        document.getElementById('complaintForm').reset();
+      });
+      document.getElementById('resetDemoBtn').addEventListener('click', resetDemoData);
+
+      async function init() {
+        await loadAppConfig();
+        await tryInitRemote();
+        await loadTickets();
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
