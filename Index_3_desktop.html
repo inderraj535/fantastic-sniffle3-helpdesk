@@ -216,7 +216,7 @@
 
 <header>
   <div class="brand">
-    <img class="logo-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAVQAAADwCAIAAADQCguuAAA/30lEQVR42u2dd3wUxfvHn9l2/ZJcekJCSaFK710QaQJCaAIKfO2KUqQqUmwYpPhTERsKKqD0jvSiFANIbyEhpEB6ckmu3+[...]" alt="logo">
+    <img class="logo-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAVQAAADwCAIAAADQCguuAAA/30lEQVR42u2dd3wUxfvHn9l2/ZJcekJCSaFK710QaQJCaAIKfO2KUqQqUmwYpPhTERsKKqD0jvSiFANIbyEhpEB6ckmu3+[...]
     <div>
       <h1>Bajaj Service Help Desk</h1>
       <small>2-Wheelers (Motorcycles) &amp; 3-Wheelers (Bajaj) · Customer complaint capture</small>
@@ -415,7 +415,7 @@
     </div>
     <div class="card">
       <h2>Data</h2>
-      <p class="hint" style="margin-top:0">Complaints are stored only in this browser on this device unless you configure a remote backend (Firebase). See firebase-config.example.json in the repo.</p>
+      <p class="hint" style="margin-top:0">Complaints are stored only in this browser on this device unless you configure a remote backend (Firebase). See firebase-config.example.json in the repo[...]</p>
       <div class="actions">
         <button class="btn btn-danger" id="wipeAll">🗑️ Delete all complaints</button>
       </div>
@@ -429,6 +429,9 @@
 <script>
 (function () {
   "use strict";
+
+  // Google Apps Script web app URL (replace with your deployed URL if different)
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbw25rVHqlB58J2UZFmqMwdfdiiKKirTMhN4sNGCwOXsYLtsiEtlU_xMdlhFBQ7Q69MYMg/exec';
 
   const STORE_KEY = "metl_bajaj_helpdesk_v1";
   const SETTINGS_KEY = "metl_bajaj_helpdesk_settings_v1";
@@ -466,20 +469,70 @@
       settings = Object.assign({ teamNumber: "" }, JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"));
     } catch (e) { settings = { teamNumber: "" }; }
 
+    // 1) Try Google Apps Script backend if configured
+    try {
+      if (GAS_URL) {
+        const res = await fetch(GAS_URL + '?t=' + Date.now());
+        if (res.ok) {
+          const rows = await res.json();
+          if (Array.isArray(rows)) {
+            // The Apps Script returns rows as objects with headers as keys
+            tickets = rows.map(r => {
+              // ensure keys exist and types are strings where appropriate
+              return Object.assign({
+                id: r.id || r.ID || r.Id || r.ticketId || '',
+                createdAt: r.createdAt || r.created_at || r.CreatedAt || new Date().toISOString(),
+                updatedAt: r.updatedAt || r.updated_at || r.UpdatedAt || new Date().toISOString(),
+                status: r.status || 'Open'
+              }, r);
+            }).reverse(); // reverse so newest appear first (sheet has oldest first)
+            console.info('Loaded', tickets.length, 'tickets from GAS');
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load from GAS', e);
+    }
+
+    // 2) Try Firebase if available
     if (useRemote) {
       try {
         const snapshot = await remoteCol.orderBy('createdAt', 'desc').get();
         tickets = snapshot.docs.map(d => d.data());
+        return;
       } catch (e) {
         console.warn('Failed to fetch remote tickets, falling back to localStorage', e);
-        try { tickets = JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); } catch (e) { tickets = []; }
       }
-    } else {
-      try { tickets = JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); } catch (e) { tickets = []; }
     }
+
+    // 3) Fallback to localStorage
+    try { tickets = JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); } catch (e) { tickets = []; }
   }
 
   async function saveTickets() {
+    // Attempt GAS save first (preferred if configured)
+    if (GAS_URL) {
+      try {
+        const payload = { tickets };
+        const res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          try { localStorage.setItem(STORE_KEY, JSON.stringify(tickets)); } catch (e) {}
+          console.info('Saved tickets to GAS');
+          return;
+        } else {
+          console.warn('GAS save responded with', res.status);
+        }
+      } catch (e) {
+        console.warn('Failed to save to GAS', e);
+      }
+    }
+
+    // If GAS not available or failed, fallback to Firebase if configured
     if (useRemote) {
       try {
         const batch = remoteDb.batch();
@@ -497,6 +550,8 @@
         return;
       }
     }
+
+    // Local-only fallback
     try { localStorage.setItem(STORE_KEY, JSON.stringify(tickets)); } catch (e) { toast("Could not save to this browser. Export CSV as a backup."); }
   }
 
@@ -507,404 +562,4 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
   function esc(s) {
-    return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  }
-  function toast(msg) {
-    const t = $("#toast");
-    t.textContent = msg;
-    t.classList.add("show");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => t.classList.remove("show"), 2600);
-  }
-  function fmtDate(iso) {
-    const d = new Date(iso);
-    return d.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-  }
-  function newId() {
-    const d = new Date();
-    const stamp = d.getFullYear().toString().slice(-2) +
-      String(d.getMonth() + 1).padStart(2, "0") +
-      String(d.getDate()).padStart(2, "0");
-    const seq = String(tickets.filter(t => t.id.includes(stamp)).length + 1).padStart(3, "0");
-    return "MT" + stamp + "-" + seq;
-  }
-  function cleanPhone(p) { return String(p || "").replace(/[^\d+]/g, ""); }
-  function waDigits(p) { return cleanPhone(p).replace(/^\+/, ""); }
-  function vehicleLabel(v) { return v === "3W" ? "3-Wheeler (Bajaj)" : "2-Wheeler (Motorcycle)"; }
-
-  function buildTicketMessage(t) {
-    return [
-      "*MeTL Bajaj Service Help Desk*",
-      "Ticket: " + t.id + "  |  Priority: " + t.priority + "  |  Status: " + t.status,
-      "",
-      "*Vehicle:* " + vehicleLabel(t.vehicleType),
-      "*Model:* " + t.model,
-      "*Chassis No:* " + t.chassisNo + (t.regNo ? "  |  *Reg. no.:* " + t.regNo : ""),
-      t.kms ? "*Odometer:* " + t.kms + " km" : null,
-      t.purchaseDate ? "*Purchase/last service:* " + t.purchaseDate : null,
-      "*Warranty:* " + t.warranty,
-      "",
-      "*Customer:* " + t.custName,
-      "*Phone:* " + t.custPhone,
-      t.custAddress ? "*Location:* " + t.custAddress : null,
-      "*Dealer/Branch:* " + t.branch,
-      "",
-      "*Category:* " + t.category,
-      "*Complaint:* " + t.description,
-      t.partsNeeded ? "*Parts needed:* " + t.partsNeeded : null,
-      "",
-      "*Assigned to:* " + (t.assignedTo || "Unassigned"),
-      "*Logged:* " + fmtDate(t.createdAt)
-    ].filter(x => x !== null).join("\n");
-  }
-
-  function buildOpenSummary() {
-    const open = tickets.filter(t => t.status !== "Resolved");
-    if (!open.length) return "*MeTL Bajaj Service Help Desk*\nNo open complaints right now. ✅";
-    const lines = open
-      .sort((a, b) => priorityRank(a.priority) - priorityRank(b.priority))
-      .map((t, i) => (i + 1) + ". " + t.id + " | " + t.priority + " | " + vehicleLabel(t.vehicleType) +
-        " | " + t.model + " | " + t.regNo + " | " + t.custName + " | " + t.category + " | " + t.status);
-    return "*MeTL Bajaj Service Help Desk - Open Complaints (" + open.length + ")*\n" +
-      new Date().toLocaleDateString("en-GB") + "\n\n" + lines.join("\n");
-  }
-
-  function priorityRank(p) { return p === "High" ? 0 : p === "Medium" ? 1 : 2; }
-
-  function openWhatsApp(text) {
-    const num = waDigits(settings.teamNumber);
-    const params = (num ? "phone=" + num + "&" : "") + "text=" + encodeURIComponent(text);
-    try { if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {}); } catch (e) {}
-    const nativeUrl = "whatsapp://send?" + params;
-    const webUrl = "https://wa.me/" + (num || "") + "?text=" + encodeURIComponent(text);
-    window.location.href = nativeUrl;
-    setTimeout(() => { window.open(webUrl, "_blank"); }, 800);
-    toast("Message copied. If WhatsApp doesn't open, paste it into the chat.");
-  }
-
-  function showTab(name) {
-    $$('nav .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-    ['new', 'log', 'dash', 'settings'].forEach(n => document.getElementById('tab-' + n).classList.toggle('hidden', n !== name));
-    if (name === 'log') renderLog();
-    if (name === 'dash') renderDash();
-  }
-
-  function fillModels(vt) {
-    const sel = $("#model");
-    sel.innerHTML = '<option value="">Select model</option>' +
-      MODELS[vt].map(m => '<option>' + esc(m) + '</option>').join("");
-  }
-  function currentVehicle() {
-    const r = document.querySelector('input[name="vehicleType"]:checked');
-    return r ? r.value : '2W';
-  }
-  function setVehicle(vt) {
-    $$('#vehicleType .radio-pill').forEach(p => {
-      const on = p.dataset.val === vt;
-      p.classList.toggle('selected', on);
-      p.querySelector('input').checked = on;
-    });
-    fillModels(vt);
-  }
-
-  function readForm() {
-    const f = $("#complaintForm");
-    const g = (n) => (f.elements[n] ? f.elements[n].value.trim() : "");
-    return {
-      vehicleType: currentVehicle(),
-      custName: g("custName"),
-      custPhone: g("custPhone"),
-      custAddress: g("custAddress"),
-      model: g("model"),
-      regNo: g("regNo").toUpperCase(),
-      chassisNo: g("chassisNo"),
-      kms: g("kms"),
-      purchaseDate: g("purchaseDate"),
-      branch: g("branch"),
-      category: g("category"),
-      priority: g("priority") || "Medium",
-      warranty: g("warranty") || "Unknown",
-      description: g("description"),
-      partsNeeded: g("partsNeeded"),
-      assignedTo: g("assignedTo")
-    };
-  }
-
-  function validate(d) {
-    const missing = [];
-    if (!d.custName) missing.push("Customer name");
-    if (cleanPhone(d.custPhone).replace(/\D/g, "").length < 9) missing.push("Valid phone number");
-    if (!d.model) missing.push("Model");
-    if (!d.chassisNo) missing.push("Chassis No");
-    if (!d.branch) missing.push("Dealer / branch");
-    if (!d.category) missing.push("Category");
-    if (!d.description) missing.push("Description");
-    return missing;
-  }
-
-  document.addEventListener('DOMContentLoaded', async () => {
-    await tryInitRemote();
-    await load();
-    initUI();
-  });
-
-  function initUI() {
-    $("#complaintForm").addEventListener("submit", async function (e) {
-      e.preventDefault();
-      const d = readForm();
-      const missing = validate(d);
-      if (missing.length) {
-        $("#formError").textContent = "Please fill: " + missing.join(", ");
-        return;
-      }
-      $("#formError").textContent = "";
-
-      const ticket = Object.assign(d, {
-        id: newId(),
-        status: "Open",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-      tickets.unshift(ticket);
-      await saveTickets();
-
-      this.reset();
-      setVehicle("2W");
-      toast("Saved as " + ticket.id);
-      showShareBanner(ticket);
-    });
-
-    $("#clearForm").addEventListener("click", () => { $("#complaintForm").reset(); $("#formError").textContent = ""; setVehicle("2W"); });
-    $$("#vehicleType .radio-pill").forEach(p => { p.addEventListener("click", () => setVehicle(p.dataset.val)); });
-
-    $("#ticketList").addEventListener("change", async function (e) {
-      const el = e.target;
-      if (el.dataset.act !== "status") return;
-      const t = tickets.find(x => x.id === el.dataset.id);
-      if (!t) return;
-      t.status = el.value;
-      t.updatedAt = new Date().toISOString();
-      await saveTickets();
-      if (useRemote) try { await remoteCol.doc(t.id).set(t, { merge: true }); } catch (e) { console.warn(e); }
-      renderLog();
-      toast(t.id + " → " + t.status);
-    });
-
-    $("#ticketList").addEventListener("click", async function (e) {
-      const btn = e.target.closest("button[data-act]");
-      if (!btn) return;
-      const id = btn.dataset.id;
-      const t = tickets.find(x => x.id === id);
-      if (!t) return;
-
-      if (btn.dataset.act === "share") { openWhatsApp(buildTicketMessage(t)); }
-      if (btn.dataset.act === "assign") {
-        const row = btn.parentElement;
-        if (row.querySelector(".assign-box")) return;
-        const box = document.createElement("span");
-        box.className = "assign-box";
-        box.style.cssText = "display:inline-flex;gap:6px;align-items:center;";
-        box.innerHTML = '<input placeholder="Team member" value="' + esc(t.assignedTo || "") + '" style="width:160px;padding:6px">' +
-          '<button type="button" class="btn btn-primary btn-sm">Save</button>';
-        row.appendChild(box);
-        const input = box.querySelector("input");
-        box.querySelector("button").addEventListener("click", async () => {
-          t.assignedTo = input.value.trim();
-          t.updatedAt = new Date().toISOString();
-          await saveTickets();
-          if (useRemote) try { await remoteCol.doc(t.id).set(t, { merge: true }); } catch (e) { console.warn(e); }
-          renderLog();
-        });
-        input.focus();
-      }
-      if (btn.dataset.act === "delete") {
-        if (!btn.dataset.armed) {
-          btn.dataset.armed = "1";
-          btn.textContent = "Click again to delete";
-          setTimeout(() => { if (btn.isConnected) { btn.dataset.armed = ""; btn.textContent = "Delete"; } }, 4000);
-          return;
-        }
-        tickets = tickets.filter(x => x.id !== id);
-        await saveTickets();
-        if (useRemote) try { await remoteCol.doc(id).delete(); } catch (e) { console.warn(e); }
-        renderLog();
-        toast("Deleted " + id);
-      }
-    });
-
-    ["searchBox", "filterVehicle", "filterStatus", "filterPriority"].forEach(id => {
-      $("#" + id).addEventListener("input", renderLog);
-      $("#" + id).addEventListener("change", renderLog);
-    });
-
-    $("#shareOpen").addEventListener("click", () => {
-      const open = tickets.filter(t => t.status !== "Resolved");
-      if (!open.length) { toast("No open complaints to share."); return; }
-      openWhatsApp(buildOpenSummary());
-    });
-
-    $("#exportCsv").addEventListener("click", () => {
-      if (!tickets.length) { toast("Nothing to export yet."); return; }
-      const cols = ["id", "createdAt", "status", "priority", "vehicleType", "model", "regNo", "chassisNo", "kms",
-        "purchaseDate", "custName", "custPhone", "custAddress", "branch", "category", "warranty",
-        "description", "partsNeeded", "assignedTo", "updatedAt"];
-      const esc2 = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-      const csv = [cols.join(",")].concat(tickets.map(t => cols.map(c => esc2(t[c])).join(","))).join("\n");
-      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "metl_bajaj_complaints_" + new Date().toISOString().slice(0, 10) + ".csv";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    });
-
-    $("#teamNumber").value = settings.teamNumber || "";
-    $("#saveSettings").addEventListener("click", () => { settings.teamNumber = $("#teamNumber").value.trim(); saveSettings(); toast("Settings saved."); });
-    $("#wipeAll").addEventListener("click", async () => {
-      if (!tickets.length) { toast("Nothing to delete."); return; }
-      const b = $("#wipeAll");
-      if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Click again to delete ALL"; setTimeout(() => { b.dataset.armed = ""; b.textContent = "🗑️ Delete all complaints"; }, 4000); return; }
-      b.dataset.armed = ""; b.textContent = "🗑️ Delete all complaints";
-      if (useRemote) {
-        try {
-          const snap = await remoteCol.get();
-          const batch = remoteDb.batch();
-          snap.docs.forEach(d => batch.delete(d.ref));
-          await batch.commit();
-        } catch (e) { console.warn('Failed to wipe remote', e); }
-      }
-      tickets = [];
-      await saveTickets();
-      renderLog();
-      toast("All complaints deleted.");
-    });
-
-    const ADMIN_PIN = "metl2026";
-    let isAdmin = sessionStorage.getItem(ADMIN_SESSION_KEY) === "1";
-
-    function applyRole() {
-      document.body.classList.toggle("is-admin", isAdmin);
-      sessionStorage.setItem(ADMIN_SESSION_KEY, isAdmin ? "1" : "0");
-      $("#adminBtn").textContent = isAdmin ? "🔓 Staff logout" : "🔒 Staff login";
-
-      if (!isAdmin) {
-        if ($("nav .tab.admin-tab.active")) showTab("new");
-        return;
-      }
-
-      showTab("log");
-      toast("Staff access granted.");
-    }
-
-    $("#adminBtn").addEventListener("click", () => {
-      if (isAdmin) {
-        isAdmin = false;
-        applyRole();
-        toast("Signed out of staff area.");
-        return;
-      }
-      $("#pinBox").classList.remove("hidden");
-      $("#pinInput").value = "";
-      $("#pinErr").textContent = "";
-      $("#pinInput").focus();
-    });
-
-    $("#pinCancel").addEventListener("click", () => $("#pinBox").classList.add("hidden"));
-
-    function tryPin() {
-      if ($("#pinInput").value === ADMIN_PIN) {
-        isAdmin = true;
-        $("#pinBox").classList.add("hidden");
-        applyRole();
-      } else {
-        $("#pinErr").textContent = "Incorrect PIN. Please try again.";
-      }
-    }
-
-    $("#pinOk").addEventListener("click", tryPin);
-    $("#pinInput").addEventListener("keydown", e => { if (e.key === "Enter") tryPin(); });
-
-    applyRole();
-    setVehicle("2W");
-    renderLog();
-    renderDash();
-    $("#todayLabel").textContent = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
-  }
-
-  function filteredTickets() {
-    const q = $("#searchBox").value.trim().toLowerCase();
-    const v = $("#filterVehicle").value;
-    const s = $("#filterStatus").value;
-    const p = $("#filterPriority").value;
-    return tickets.filter(t => {
-      if (v && t.vehicleType !== v) return false;
-      if (s && t.status !== s) return false;
-      if (p && t.priority !== p) return false;
-      if (q) {
-        const hay = [t.id, t.custName, t.custPhone, t.regNo, t.model, t.branch, t.category].join(" ").toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }
-
-  function renderLog() {
-    const list = filteredTickets();
-    const box = $("#ticketList");
-    if (!tickets.length) { box.innerHTML = '<div class="empty">No complaints logged yet. Use “New Complaint” to add the first one.</div>'; return; }
-    if (!list.length) { box.innerHTML = '<div class="empty">No complaints match these filters.</div>'; return; }
-    box.innerHTML = list.map(t => {
-      const statusCls = "b-" + t.status.replace(/\s/g, "");
-      return '' +
-        '<div class="ticket p-' + esc(t.priority) + '">' +
-          '<div class="ticket-head">' +
-            '<div><span class="ticket-id">' + esc(t.id) + '</span>' +
-              '<span class="badge ' + statusCls + '">' + esc(t.status) + '</span>' +
-              '<span class="badge b-' + esc(t.priority) + '">' + esc(t.priority) + '</span>' +
-              '<span class="badge">' + esc(t.vehicleType === "3W" ? "3W" : "2W") + '</span>' +
-            '</div>' +
-            '<small style="color:var(--muted)">' + esc(fmtDate(t.createdAt)) + '</small>' +
-          '</div>' +
-          '<div class="ticket-meta">' +
-            '<strong>' + esc(t.custName) + '</strong> · ' + esc(t.custPhone) + '<br>' +
-            esc(t.model) + ' · Chassis: <strong>' + esc(t.chassisNo) + '</strong>' +
-            (t.regNo ? ' · Reg: ' + esc(t.regNo) : '') + '<br>' +
-            'Branch: ' + esc(t.branch) + ' · Category: ' + esc(t.category) + '<br>' +
-            'Assigned: ' + esc(t.assignedTo || "Unassigned") + ' · Warranty: ' + esc(t.warranty) +
-          '</div>' +
-          '<div class="ticket-desc">' + esc(t.description) + '</div>' +
-          (t.partsNeeded ? '<div class="ticket-meta">Parts: ' + esc(t.partsNeeded) + '</div>' : '') +
-          '<div class="actions">' +
-            '<select data-act="status" data-id="' + esc(t.id) + '" style="width:auto">' +
-              ['Open', 'In Progress', 'Resolved'].map(s => '<option' + (s === t.status ? ' selected' : '') + '>' + s + '</option>').join("") +
-            '</select>' +
-            '<button class="btn btn-wa btn-sm" data-act="share" data-id="' + esc(t.id) + '">📲 Share</button>' +
-            '<button class="btn btn-ghost btn-sm" data-act="assign" data-id="' + esc(t.id) + '">👤 Assign</button>' +
-            '<button class="btn btn-danger btn-sm" data-act="delete" data-id="' + esc(t.id) + '">Delete</button>' +
-          '</div>' +
-        '</div>';
-    }).join("");
-  }
-
-  function countBy(arr, key) { return arr.reduce((acc, t) => { const k = t[key] || "—"; acc[k] = (acc[k] || 0) + 1; return acc; }, {}); }
-  function bars(obj) { const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]); if (!entries.length) return '<div class="empty">No data yet.</div>'; const max = Math.max(...entries.map(e => e[1])); return entries.map(([k, v]) => '<div style="margin:8px 0">' + '<div style="display:flex;justify-content:space-between;font-size:13px"><span>' + esc(k) + '</span><strong>' + v + '</strong></div>' + '<div style="background:#eef1f5;border-radius:6px;height:10px;overflow:hidden">' + '<div style="background:var(--red);height:100%;width:' + Math.round(v / max * 100) + '%"></div>' + '</div>' + '</div>').join(""); }
-  function renderDash() {
-    const total = tickets.length;
-    const open = tickets.filter(t => t.status === "Open").length;
-    const prog = tickets.filter(t => t.status === "In Progress").length;
-    const done = tickets.filter(t => t.status === "Resolved").length;
-    const high = tickets.filter(t => t.priority === "High" && t.status !== "Resolved").length;
-    const twoW = tickets.filter(t => t.vehicleType === "2W").length;
-    const threeW = tickets.filter(t => t.vehicleType === "3W").length;
-    const stat = (n, l) => '<div class="stat"><div class="num">' + n + '</div><div class="lbl">' + l + '</div></div>';
-    $("#statsBox").innerHTML = [stat(total, "Total complaints"), stat(open, "Open"), stat(prog, "In progress"), stat(done, "Resolved"), stat(high, "High priority (unresolved)"), stat(twoW, "2-Wheelers"), stat(threeW, "3-Wheelers")].join("");
-    $("#catBreakdown").innerHTML = bars(countBy(tickets, "category"));
-    $("#modelBreakdown").innerHTML = bars(countBy(tickets, "model"));
-  }
-
-})();
-</script>
-
-</body>
-</html>
+    return String(s == null ? "" : s).replace(/[&<>\
