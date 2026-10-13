@@ -1,17 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 520" role="img" aria-label="MeTL Group logo">
-  <rect width="980" height="520" rx="42" fill="#f2f2f2"/>
-  <g>
-    <text x="70" y="260" font-size="300" font-weight="900" font-family="Arial Black, Arial, Helvetica, sans-serif" fill="#0c3f8d" letter-spacing="-18">Me</text>
-    <circle cx="454" cy="150" r="90" fill="#f4c600"/>
-    <circle cx="454" cy="150" r="56" fill="#f2f2f2"/>
-    <path d="M394 150 H516" stroke="#0c3f8d" stroke-width="34" stroke-linecap="round" opacity="0.95"/>
-    <text x="520" y="260" font-size="300" font-weight="900" font-family="Arial Black, Arial, Helvetica, sans-serif" fill="#0c3f8d" letter-spacing="-18">TL</text>
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700" role="img" aria-label="MeTL Group logo">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .metl-blue { fill: #0b3d91; }
+      .metl-yellow { fill: #f4c400; }
+      .tagline { fill: #000000; font-family: Arial, Helvetica, sans-serif; font-weight:700 }
+      .group { fill: #0b3d91; font-family: Arial Black, Arial, Helvetica, sans-serif; font-weight:900 }
+    </style>
+  </defs>
+
+  <!-- rounded white background -->
+  <rect x="12" y="12" width="1176" height="676" rx="40" class="bg" stroke="#ffffff" stroke-width="0"/>
+
+  <!-- METL letters: using text for simplicity -->
+  <g transform="translate(60,160)">
+    <text x="0" y="160" font-size="240" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" fill="#0b3d91">M</text>
+    <!-- yellow circle with white 'e' centered where E would be -->
+    <g transform="translate(210,0)">
+      <circle cx="150" cy="120" r="120" fill="#f4c400"/>
+      <text x="150" y="175" text-anchor="middle" font-size="180" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" fill="#ffffff">e</text>
+    </g>
+    <text x="560" y="160" font-size="240" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" fill="#0b3d91">TL</text>
   </g>
 
-  <g>
-    <line x1="120" y1="320" x2="330" y2="320" stroke="#0c3f8d" stroke-width="8" stroke-linecap="round"/>
-    <text x="365" y="360" font-size="110" font-weight="900" font-family="Arial Black, Arial, Helvetica, sans-serif" fill="#0c3f8d" letter-spacing="4">GROUP</text>
-    <line x1="720" y1="320" x2="860" y2="320" stroke="#0c3f8d" stroke-width="8" stroke-linecap="round"/>
-    <text x="300" y="455" font-size="72" font-weight="700" font-family="Arial, Helvetica, sans-serif" fill="#0c3f8d" text-anchor="middle" letter-spacing="1">The People’s Brand</text>
+  <!-- decorative lines and GROUP text -->
+  <g transform="translate(120,360)">
+    <line x1="0" y1="40" x2="260" y2="40" stroke="#0b3d91" stroke-width="8" stroke-linecap="round"/>
+    <text x="320" y="110" class="group" font-size="110">GROUP</text>
+    <line x1="880" y1="40" x2="1140" y2="40" stroke="#0b3d91" stroke-width="8" stroke-linecap="round"/>
   </g>
+
+  <!-- tagline -->
+  <text x="600" y="560" text-anchor="middle" class="tagline" font-size="54">The People’s Brand</text>
+
 </svg>
