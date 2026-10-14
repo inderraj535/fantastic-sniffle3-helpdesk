@@ -452,40 +452,116 @@
   let tickets = [];
   let settings = { teamNumber: "" };
 
-  /* ---------- storage ---------- */
+  const elements = {
+    ticketList: document.getElementById("ticketList"),
+    searchBox: document.getElementById("searchBox"),
+    filterVehicle: document.getElementById("filterVehicle"),
+    filterStatus: document.getElementById("filterStatus"),
+    filterPriority: document.getElementById("filterPriority"),
+    shareOpen: document.getElementById("shareOpen"),
+    exportCsv: document.getElementById("exportCsv"),
+    teamNumber: document.getElementById("teamNumber"),
+    saveSettings: document.getElementById("saveSettings"),
+    wipeAll: document.getElementById("wipeAll"),
+    form: document.getElementById("complaintForm"),
+    toast: document.getElementById("toast"),
+    pinBox: document.getElementById("pinBox"),
+    pinInput: document.getElementById("pinInput"),
+    pinErr: document.getElementById("pinErr"),
+    adminBtn: document.getElementById("adminBtn"),
+    shareBanner: document.getElementById("shareBanner"),
+    todayLabel: document.getElementById("todayLabel"),
+    statsBox: document.getElementById("statsBox"),
+    catBreakdown: document.getElementById("catBreakdown"),
+    modelBreakdown: document.getElementById("modelBreakdown")
+  };
+
+  function debounce(fn, wait) {
+    let timeoutId;
+    return (...args) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => fn(...args), wait);
+    };
+  }
+
+  function buildSearchText(t) {
+    return [
+      t.id,
+      t.custName,
+      t.custPhone,
+      t.regNo,
+      t.model,
+      t.branch,
+      t.category,
+      t.description,
+      t.assignedTo,
+      t.partsNeeded
+    ].join(" ").toLowerCase();
+  }
+
   function load() {
     try {
       tickets = JSON.parse(localStorage.getItem(STORE_KEY) || "[]");
-    } catch (e) { tickets = []; }
+      tickets.forEach(t => {
+        if (!t._search) t._search = buildSearchText(t);
+      });
+    } catch (e) {
+      tickets = [];
+    }
+
     try {
       settings = Object.assign({ teamNumber: "" }, JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"));
-    } catch (e) { settings = { teamNumber: "" }; }
-  }
-  function saveTickets() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(tickets)); }
-    catch (e) { toast("Could not save to this browser. Export CSV as a backup."); }
-  }
-  function saveSettings() {
-    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
+    } catch (e) {
+      settings = { teamNumber: "" };
+    }
   }
 
-  /* ---------- helpers ---------- */
+  const flushTicketsSave = () => {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(tickets));
+    } catch (e) {
+      toast("Could not save to this browser. Export CSV as a backup.");
+    }
+  };
+
+  const debouncedSaveTickets = debounce(flushTicketsSave, 250);
+
+  function saveTickets() {
+    debouncedSaveTickets();
+  }
+
+  const flushSettingsSave = () => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {}
+  };
+
+  const debouncedSaveSettings = debounce(flushSettingsSave, 250);
+
+  function saveSettings() {
+    debouncedSaveSettings();
+  }
+
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
   function esc(s) {
-    return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    return String(s == null ? "" : s).replace(/[&<>\"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
+
   function toast(msg) {
-    const t = $("#toast");
+    const t = elements.toast;
     t.textContent = msg;
     t.classList.add("show");
     clearTimeout(toast._t);
     toast._t = setTimeout(() => t.classList.remove("show"), 2600);
   }
+
   function fmtDate(iso) {
     const d = new Date(iso);
     return d.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   }
+
   function newId() {
     const d = new Date();
     const stamp = d.getFullYear().toString().slice(-2) +
@@ -494,11 +570,11 @@
     const seq = String(tickets.filter(t => t.id.includes(stamp)).length + 1).padStart(3, "0");
     return "MT" + stamp + "-" + seq;
   }
+
   function cleanPhone(p) { return String(p || "").replace(/[^\d+]/g, ""); }
   function waDigits(p) { return cleanPhone(p).replace(/^\+/, ""); }
   function vehicleLabel(v) { return v === "3W" ? "3-Wheeler (Bajaj)" : "2-Wheeler (Motorcycle)"; }
 
-  /* ---------- WhatsApp ---------- */
   function buildTicketMessage(t) {
     return [
       "*MeTL Bajaj Service Help Desk*",
@@ -548,7 +624,6 @@
     toast("Message copied. If WhatsApp doesn't open, paste it into the chat.");
   }
 
-  /* ---------- tabs ---------- */
   function showTab(name) {
     $$("nav .tab").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
     ["new", "log", "dash", "settings"].forEach(n => $("#tab-" + n).classList.toggle("hidden", n !== name));
@@ -556,16 +631,17 @@
     if (name === "dash") renderDash();
   }
 
-  /* ---------- form ---------- */
   function fillModels(vt) {
     const sel = $("#model");
     sel.innerHTML = '<option value="">Select model</option>' +
       MODELS[vt].map(m => '<option>' + esc(m) + '</option>').join("");
   }
+
   function currentVehicle() {
     const r = document.querySelector('input[name="vehicleType"]:checked');
     return r ? r.value : "2W";
   }
+
   function setVehicle(vt) {
     $$("#vehicleType .radio-pill").forEach(p => {
       const on = p.dataset.val === vt;
@@ -626,6 +702,8 @@
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
+    ticket._search = buildSearchText(ticket);
+
     tickets.unshift(ticket);
     saveTickets();
 
@@ -657,18 +735,18 @@
     p.addEventListener("click", () => setVehicle(p.dataset.val));
   });
 
-  /* ---------- log ---------- */
   function filteredTickets() {
-    const q = $("#searchBox").value.trim().toLowerCase();
-    const v = $("#filterVehicle").value;
-    const s = $("#filterStatus").value;
-    const p = $("#filterPriority").value;
+    const q = elements.searchBox.value.trim().toLowerCase();
+    const v = elements.filterVehicle.value;
+    const s = elements.filterStatus.value;
+    const p = elements.filterPriority.value;
+
     return tickets.filter(t => {
       if (v && t.vehicleType !== v) return false;
       if (s && t.status !== s) return false;
       if (p && t.priority !== p) return false;
       if (q) {
-        const hay = [t.id, t.custName, t.custPhone, t.regNo, t.model, t.branch, t.category].join(" ").toLowerCase();
+        const hay = t._search || buildSearchText(t);
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -677,7 +755,8 @@
 
   function renderLog() {
     const list = filteredTickets();
-    const box = $("#ticketList");
+    const box = elements.ticketList;
+
     if (!tickets.length) {
       box.innerHTML = '<div class="empty">No complaints logged yet. Use “New Complaint” to add the first one.</div>';
       return;
@@ -686,6 +765,7 @@
       box.innerHTML = '<div class="empty">No complaints match these filters.</div>';
       return;
     }
+
     box.innerHTML = list.map(t => {
       const statusCls = "b-" + t.status.replace(/\s/g, "");
       return '' +
@@ -719,19 +799,22 @@
     }).join("");
   }
 
-  $("#ticketList").addEventListener("change", function (e) {
+  const debouncedRenderLog = debounce(renderLog, 150);
+
+  elements.ticketList.addEventListener("change", function (e) {
     const el = e.target;
     if (el.dataset.act !== "status") return;
     const t = tickets.find(x => x.id === el.dataset.id);
     if (!t) return;
     t.status = el.value;
     t.updatedAt = new Date().toISOString();
+    t._search = buildSearchText(t);
     saveTickets();
     renderLog();
     toast(t.id + " → " + t.status);
   });
 
-  $("#ticketList").addEventListener("click", function (e) {
+  elements.ticketList.addEventListener("click", function (e) {
     const btn = e.target.closest("button[data-act]");
     if (!btn) return;
     const id = btn.dataset.id;
@@ -754,6 +837,7 @@
       box.querySelector("button").addEventListener("click", () => {
         t.assignedTo = input.value.trim();
         t.updatedAt = new Date().toISOString();
+        t._search = buildSearchText(t);
         saveTickets();
         renderLog();
       });
@@ -774,18 +858,17 @@
   });
 
   ["searchBox", "filterVehicle", "filterStatus", "filterPriority"].forEach(id => {
-    $("#" + id).addEventListener("input", renderLog);
-    $("#" + id).addEventListener("change", renderLog);
+    $("#" + id).addEventListener("input", debouncedRenderLog);
+    $("#" + id).addEventListener("change", debouncedRenderLog);
   });
 
-  $("#shareOpen").addEventListener("click", () => {
+  elements.shareOpen.addEventListener("click", () => {
     const open = tickets.filter(t => t.status !== "Resolved");
     if (!open.length) { toast("No open complaints to share."); return; }
     openWhatsApp(buildOpenSummary());
   });
 
-  /* ---------- export ---------- */
-  $("#exportCsv").addEventListener("click", () => {
+  elements.exportCsv.addEventListener("click", () => {
     if (!tickets.length) { toast("Nothing to export yet."); return; }
     const cols = ["id", "createdAt", "status", "priority", "vehicleType", "model", "regNo", "chassisNo", "kms",
       "purchaseDate", "custName", "custPhone", "custAddress", "branch", "category", "warranty",
@@ -794,17 +877,15 @@
     const csv = [cols.join(",")].concat(tickets.map(t => cols.map(c => esc2(t[c])).join(","))).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    a.href = url;
     a.download = "metl_bajaj_complaints_" + new Date().toISOString().slice(0, 10) + ".csv";
     document.body.appendChild(a);
     a.click();
     a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
-  /* ---------- dashboard ---------- */
-  function countBy(arr, key) {
-    return arr.reduce((acc, t) => { const k = t[key] || "—"; acc[k] = (acc[k] || 0) + 1; return acc; }, {});
-  }
   function bars(obj) {
     const entries = Object.entries(obj).sort((a, b) => b[1] - a[1]);
     if (!entries.length) return '<div class="empty">No data yet.</div>';
@@ -818,33 +899,52 @@
       '</div>'
     ).join("");
   }
+
   function renderDash() {
     const total = tickets.length;
-    const open = tickets.filter(t => t.status === "Open").length;
-    const prog = tickets.filter(t => t.status === "In Progress").length;
-    const done = tickets.filter(t => t.status === "Resolved").length;
-    const high = tickets.filter(t => t.priority === "High" && t.status !== "Resolved").length;
-    const twoW = tickets.filter(t => t.vehicleType === "2W").length;
-    const threeW = tickets.filter(t => t.vehicleType === "3W").length;
+    let open = 0;
+    let prog = 0;
+    let done = 0;
+    let high = 0;
+    let twoW = 0;
+    let threeW = 0;
+
+    const categoryCounts = {};
+    const modelCounts = {};
+
+    for (const t of tickets) {
+      if (t.status === "Open") open++;
+      if (t.status === "In Progress") prog++;
+      if (t.status === "Resolved") done++;
+      if (t.priority === "High" && t.status !== "Resolved") high++;
+
+      if (t.vehicleType === "2W") twoW++;
+      if (t.vehicleType === "3W") threeW++;
+
+      categoryCounts[t.category] = (categoryCounts[t.category] || 0) + 1;
+      modelCounts[t.model] = (modelCounts[t.model] || 0) + 1;
+    }
+
     const stat = (n, l) => '<div class="stat"><div class="num">' + n + '</div><div class="lbl">' + l + '</div></div>';
-    $("#statsBox").innerHTML = [
+    elements.statsBox.innerHTML = [
       stat(total, "Total complaints"), stat(open, "Open"), stat(prog, "In progress"),
       stat(done, "Resolved"), stat(high, "High priority (unresolved)"), stat(twoW, "2-Wheelers"), stat(threeW, "3-Wheelers")
     ].join("");
-    $("#catBreakdown").innerHTML = bars(countBy(tickets, "category"));
-    $("#modelBreakdown").innerHTML = bars(countBy(tickets, "model"));
+
+    elements.catBreakdown.innerHTML = bars(categoryCounts);
+    elements.modelBreakdown.innerHTML = bars(modelCounts);
   }
 
-  /* ---------- settings ---------- */
-  $("#teamNumber").value = "";
-  $("#saveSettings").addEventListener("click", () => {
-    settings.teamNumber = $("#teamNumber").value.trim();
+  elements.teamNumber.value = "";
+  elements.saveSettings.addEventListener("click", () => {
+    settings.teamNumber = elements.teamNumber.value.trim();
     saveSettings();
     toast("Settings saved.");
   });
-  $("#wipeAll").addEventListener("click", () => {
+
+  elements.wipeAll.addEventListener("click", () => {
     if (!tickets.length) { toast("Nothing to delete."); return; }
-    const b = $("#wipeAll");
+    const b = elements.wipeAll;
     if (!b.dataset.armed) {
       b.dataset.armed = "1";
       b.textContent = "Click again to delete ALL";
@@ -859,47 +959,49 @@
     toast("All complaints deleted.");
   });
 
-  /* ---------- init ---------- */
   $$("nav .tab").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
-  $("#todayLabel").textContent = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+  elements.todayLabel.textContent = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
   load();
-  $("#teamNumber").value = settings.teamNumber || "";
+  elements.teamNumber.value = settings.teamNumber || "";
   setVehicle("2W");
 
-  // Fields only staff fill in are hidden from customers
   ["priority", "warranty", "assignedTo", "kms", "purchaseDate", "partsNeeded"].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.closest("div")) el.closest("div").classList.add("admin-only");
   });
 
-  // Staff access (PIN is checked in the page code; change it below)
   const ADMIN_PIN = "metl2026";
   let isAdmin = false;
+
   function applyRole() {
     document.body.classList.toggle("is-admin", isAdmin);
-    $("#adminBtn").textContent = isAdmin ? "🔓 Staff logout" : "🔒 Staff login";
+    elements.adminBtn.textContent = isAdmin ? "🔓 Staff logout" : "🔒 Staff login";
     if (!isAdmin && $("nav .tab.admin-tab.active")) showTab("new");
   }
-  $("#adminBtn").addEventListener("click", () => {
+
+  elements.adminBtn.addEventListener("click", () => {
     if (isAdmin) { isAdmin = false; applyRole(); toast("Signed out of staff area."); return; }
-    $("#pinBox").classList.remove("hidden");
-    $("#pinInput").value = "";
-    $("#pinErr").textContent = "";
-    $("#pinInput").focus();
+    elements.pinBox.classList.remove("hidden");
+    elements.pinInput.value = "";
+    elements.pinErr.textContent = "";
+    elements.pinInput.focus();
   });
-  $("#pinCancel").addEventListener("click", () => $("#pinBox").classList.add("hidden"));
+
+  elements.pinCancel.addEventListener("click", () => elements.pinBox.classList.add("hidden"));
+
   function tryPin() {
-    if ($("#pinInput").value === ADMIN_PIN) {
+    if (elements.pinInput.value === ADMIN_PIN) {
       isAdmin = true;
-      $("#pinBox").classList.add("hidden");
+      elements.pinBox.classList.add("hidden");
       applyRole();
       toast("Staff access granted.");
     } else {
-      $("#pinErr").textContent = "Incorrect PIN. Please try again.";
+      elements.pinErr.textContent = "Incorrect PIN. Please try again.";
     }
   }
-  $("#pinOk").addEventListener("click", tryPin);
-  $("#pinInput").addEventListener("keydown", e => { if (e.key === "Enter") tryPin(); });
+
+  elements.pinOk.addEventListener("click", tryPin);
+  elements.pinInput.addEventListener("keydown", e => { if (e.key === "Enter") tryPin(); });
   applyRole();
 })();
 </script>
